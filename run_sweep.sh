@@ -1,0 +1,1 @@
+python scripts/train_sweeps.py --sweep_file "scripts/sweeps.yml"
