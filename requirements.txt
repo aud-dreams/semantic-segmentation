@@ -13,3 +13,4 @@ torch
 torchvision
 wandb
 rich
+segmentation-models-pytorch

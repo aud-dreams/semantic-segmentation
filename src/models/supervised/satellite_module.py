@@ -3,6 +3,9 @@ import pytorch_lightning as pl
 from torch.optim import Adam
 from torch import nn
 import torchmetrics
+import segmentation_models_pytorch as smp
+from segmentation_models_pytorch import UnetPlusPlus
+import torch.nn.functional as F
 
 from src.models.supervised.segmentation_cnn import SegmentationCNN
 from src.models.supervised.unet import UNet
@@ -59,6 +62,8 @@ class ESDSegmentation(pl.LightningModule):
             self.model = FCNResnetTransfer(
                 in_channels, out_channels, model_params["scale_factor"]
             )
+        elif model_type == "UNetxx":
+            self.model = UnetPlusPlus(encoder_name='resnet34', encoder_depth=5, encoder_weights='imagenet', decoder_use_batchnorm=True, decoder_channels=(256, 128, 64, 32, 16), decoder_attention_type=None, in_channels=9, classes=4, activation=None, aux_params=None)
         else:
             raise ValueError(f"model_type {model_type} not recognized")
 
@@ -92,7 +97,28 @@ class ESDSegmentation(pl.LightningModule):
         Input: X, a (batch, input_channels, width, height) image
         Ouputs: y, a (batch, output_channels, width/scale_factor, height/scale_factor) image
         """
-        return self.model.forward(X)
+        if isinstance(self.model, UnetPlusPlus):
+            _, _, height, width = X.shape
+            pad_height = (32 - height % 32) % 32
+            pad_width = (32 - width % 32) % 32
+            
+            pad_top = pad_height // 2
+            pad_bottom = pad_height - pad_top
+            pad_left = pad_width // 2
+            pad_right = pad_width - pad_left
+            
+            if pad_height > 0 or pad_width > 0:
+                X = F.pad(X, (pad_left, pad_right, pad_top, pad_bottom), "constant", 0)
+
+        X = self.model.forward(X)
+        # print(f"{X.shape=}")
+        if isinstance(self.model, UnetPlusPlus):
+            if X.size(2) > 200 and X.size(3) > 200:
+                padding_removed = (X.size(2) - 200) // 2
+                X = X[:, :, padding_removed:padding_removed+200, padding_removed:padding_removed+200]
+            downscale = nn.MaxPool2d(50)
+            return downscale(X)
+        return X
 
     def training_step(self, batch, batch_idx):
         """
