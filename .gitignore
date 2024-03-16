@@ -3,6 +3,7 @@ data/processed/*
 data/raw/Val/
 data/raw/zipfiles/*
 data/raw/Train/
+data/raw/unit_test_data/*
 
 esdenv
 references/*

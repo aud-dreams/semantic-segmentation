@@ -17,7 +17,6 @@ class Metadata:
     """
     A class to store metadata about a stack of satellite files from the same date.
     The attributes are the following:
-
     satellite_type: one of "viirs", "sentinel1", "sentinel2", "landsat", or "gt"
     file_name: a list of the original filenames of the satellite's bands
     tile_id: name of the tile directory, i.e., "Tile1", "Tile2", etc
