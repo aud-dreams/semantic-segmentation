@@ -52,7 +52,7 @@ class Encoder(nn.Module):
             img: output image of shape
             (batch, out_channels, width//pool_size, height//pool_size)
         """
-        print(f"{img.size=}")
+        # print(f"{img.size=}")
         for conv_layer in self.conv_layers:
             img = conv_layer(img)
             img = torch.relu(img)

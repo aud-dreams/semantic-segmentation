@@ -94,7 +94,7 @@ def main(options):
         cmap = matplotlib.colors.LinearSegmentedColormap.from_list("Settlements", np.array(['#ff0000', '#0000ff', '#ffff00', '#b266ff']), N=4)
         fig, ax = plt.subplots(nrows=1, ncols=1)
         ax.imshow(best_class_prediction, vmin=-0.5, vmax=3.5,cmap=cmap)
-        Path(options.results_dir).mkdir(parents=True, exist_ok=True)
+        Path(options.results_dir / parent_tile_id).mkdir(parents=True, exist_ok=True)
         plt.savefig(options.results_dir / f"{parent_tile_id}" / f"{parent_tile_id}.png")
 
         # Save file as TIFF
