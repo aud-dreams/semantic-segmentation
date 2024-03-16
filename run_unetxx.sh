@@ -1,0 +1,1 @@
+python -m scripts.train --model_type=UNetxx
