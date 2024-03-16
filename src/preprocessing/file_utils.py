@@ -2,10 +2,10 @@
 This module contains functions for loading satellite data from a directory of
 tiles.
 """
-from pathlib import Path 
+from pathlib import Path
 from typing import Tuple, List, Set
 import os
-from itertools import groupby # great for grouping things, think hierarchical model of data
+from itertools import groupby
 import re
 from dataclasses import dataclass
 import tifffile
@@ -30,7 +30,9 @@ class Metadata:
     bands: List[str]
     time: str
 
-
+"""
+File name processing functions copy and pasted from my homework 1 - Vincent
+"""
 def process_viirs_filename(filename: str) -> Tuple[str, str]:
     """
     This function takes in the filename of a VIIRS file and outputs
@@ -165,6 +167,38 @@ def process_ground_truth_filename(filename: str) -> Tuple[str, str]:
     return ("0", "0")
 
 
+
+def load_satellite(
+        tile_dir: str | os.PathLike,
+        satellite_type: str
+        ) -> Tuple[np.ndarray, List[Metadata]]:
+    """
+    Load all bands for a given satellite type from a directory of tile files.
+
+    Parameters
+    ----------
+    tile_dir : str or os.PathLike
+        The Tile directory containing the satellite tiff files.
+    satellite_type : str
+        The type of satellite, one of "viirs", "sentinel1", "sentinel2",
+        "landsat", "gt"
+
+    Returns
+    -------
+    Tuple[np.ndarray, List[Metadata]]
+        A tuple containing the satellite data as a volume with
+        dimensions (time, band, height, width) and a list of the filenames.
+    """
+    tile_dir = Path(tile_dir)
+    sat_files = get_satellite_files(tile_dir, satellite_type)
+    sat_data = read_satellite_files(sat_files)
+    sat_data_stack, sat_filenames = stack_satellite_data(
+        sat_data,
+        sat_files,
+        satellite_type
+        )
+    return sat_data_stack, sat_filenames
+
 def get_satellite_files(tile_dir: Path, satellite_type: str) -> List[Path]:
     """
     Retrieve all satellite files matching the satellite type pattern.
@@ -182,17 +216,9 @@ def get_satellite_files(tile_dir: Path, satellite_type: str) -> List[Path]:
     List[Path]
         A list of Path objects for each satellite file.
     """
-    # TODO: determine what exactly is a "Path" object for each satellite file
-
-    path_list = []
-    #pattern = re.compile(get_filename_pattern(satellite_type)) # the black box
-
-    # iterator that returns all the files in the directory
-    # doesn't use RE; instead, uses glob's unix style pattern
-
-    tile_dir = Path(tile_dir) # cause tile_dir isn't actually being passed in as a Path obj but a str...
     pattern = get_filename_pattern(satellite_type)
-    return [file for file in tile_dir.glob(pattern)]
+    return list(tile_dir.glob(pattern))
+
 
 def get_filename_pattern(satellite_type: str) -> str:
     """
@@ -209,8 +235,6 @@ def get_filename_pattern(satellite_type: str) -> str:
     str
         The filename pattern for the given satellite type.
     """
-    
-    # What this does is return a string that can be used to match files using the standarized file names.
     patterns = {
         "viirs": 'DNB_VNP46A1_*',
         "sentinel1": 'S1A_IW_GRDH_*',
@@ -218,93 +242,7 @@ def get_filename_pattern(satellite_type: str) -> str:
         "landsat": 'LC08_L1TP_*',
         "gt": "groundTruth.tif"
     }
-
-    try:
-        return patterns[satellite_type]
-    except: 
-        KeyError(f"Invalid satellite type: {satellite_type}") # if input is not one of the above
-
-
-def read_satellite_files(sat_files: List[Path]) -> List[np.ndarray]:
-    """
-    Read satellite files into a list of numpy arrays.
-
-    Parameters
-    ----------
-    sat_files : List[Path]
-        A list of Path objects for each satellite file.
-
-    Returns
-    -------
-    List[np.ndarray]
-
-    """
-    # a list of numpy arrays
-    np_list = []
-    for file in sat_files:
-        file = tifffile.imread(file)
-        np_list.append(file)
-    return np_list
-
-
-def stack_satellite_data(
-        sat_data: List[np.ndarray],
-        file_names: List[str],
-        satellite_type: str
-        ) -> Tuple[np.ndarray, List[Metadata]]:
-    """
-    Stack satellite data into a single array and collect filenames.
-    Parameters
-    ----------
-    sat_data : List[np.ndarray]
-        A list containing the image data for all bands with respect to
-        a single satellite (sentinel-1, sentinel-2, landsat-8, or viirs)
-        at a specific timestamp.
-    file_names : List[str]
-        A list of filenames corresponding to the satellite and timestamp.
-    Returns
-    -------
-    Tuple[np.ndarray, List[Metadata]]
-        A tuple containing the satellite data as a volume with dimensions
-        (time, band, height, width) and a list of the filenames.
-    """
-    # Get the function to group the data based on the satellite type
-    grouping_func = get_grouping_function(satellite_type) # returns a function
-
-    # Apply the grouping function to each file name to get the date and band
-    date_and_band = [grouping_func(file) for file in file_names] # returns a list of tuples 
-
-    # Sort the satellite data and file names based on the date and band
-    # ie, group and sort
-    grouped_data = sorted(zip(date_and_band, sat_data, file_names), key=lambda x: (x[0][0], x[0][1])) # lambda means "retrieve date and band from 1st tuple"
-
-    # Initialize lists to store the stacked data and metadata
-    stacked_sat_data = []
-    metadata = []
-
-    # Group the data by date
-    # note to self: the date comes from index order
-    for date, data in groupby(grouped_data, key=lambda x: x[0][0]):
-
-        # Sort the group by band
-        data = list(data) # to enable list comprehension
-
-        # Extract the date and band, satellite data, and file names from the
-        # sorted group
-        bands, grouped_data, filenames = zip(*[(item[0][1], item[1], item[2]) for item in data])
-
-        # Stack the satellite data along a new axis and append it to the list
-        stacked_sat_data.append(np.stack(grouped_data, axis=0))
-        # Create a Metadata object and append it to the list
-        metadata.append(Metadata(satellite_type, list(filenames), 'Tile', list(bands), date))
-
-    # Stack the list of satellite data arrays along a new axis to create a
-    # 4D array with dimensions (time, band, height, width)
-    stacked_sat_data = np.stack(stacked_sat_data, axis=0)
-
-    # Return the stacked satelliet data and the list Metadata objects.
-    return (stacked_sat_data, metadata)
-
+    return patterns[satellite_type]
 
 def get_grouping_function(satellite_type: str):
     """
@@ -321,110 +259,104 @@ def get_grouping_function(satellite_type: str):
     function
         The function to group satellite files by date and band.
     """
-
-    # ie if satellite_type is viirs, return process_viirs_filename
-    # processing filenames will retrieve their date and band for our use
-    functions = {
+    grouping_functions = {
         "viirs": process_viirs_filename,
         "sentinel1": process_s1_filename,
         "sentinel2": process_s2_filename,
         "landsat": process_landsat_filename,
         "gt": process_ground_truth_filename
     }
-    return functions[satellite_type]
+    return grouping_functions[satellite_type]
 
-def get_unique_dates_and_bands(
-        metadata_keys: Set[Tuple[str, str]]
-        ) -> Tuple[Set[str], Set[str]]:
+def read_satellite_files(sat_files: List[Path]) -> List[np.ndarray]:
     """
-    Extract unique dates and bands from satellite metadata keys.
+    Read satellite files into a list of numpy arrays.
 
     Parameters
     ----------
-    metadata_keys : Set[Tuple[str, str]]
-        A set of tuples containing the date and band for each satellite file.
+    sat_files : List[Path]
+        A list of Path objects for each satellite file.
 
     Returns
     -------
-    Tuple[Set[str], Set[str]]
-        A tuple containing the unique dates and bands.
+    List[np.ndarray]
+
     """
+    sat_data_list = []
+    for sat_file in sat_files:
+        with tifffile.TiffFile(sat_file) as src:
+            sat_data = src.asarray().astype(np.float32)
+            sat_data_list.append(sat_data)
+    return sat_data_list
 
-    # can use set comprehension to get unique dates and bands
-    return (set([date for date, band in metadata_keys]), set([band for date, band in metadata_keys]))
-
-def load_satellite(
-        tile_dir: str | os.PathLike,
+def stack_satellite_data(
+        sat_data: List[np.ndarray],
+        file_names: List[str],
         satellite_type: str
         ) -> Tuple[np.ndarray, List[Metadata]]:
     """
-    Load all bands for a given satellite type from a directory of tile files.
+    Stack satellite data into a single array and collect filenames.
+
     Parameters
     ----------
-    tile_dir : str or os.PathLike
-        The Tile directory containing the satellite tiff files.
-    satellite_type : str
-        The type of satellite, one of "viirs", "sentinel1", "sentinel2",
-        "landsat", "gt"
+    sat_data : List[np.ndarray]
+        A list of numpy arrays containing the satellite data.
+    file_names : List[str]
+        A dictionary containing multiple satellite filenames associated with
+        the key being the date and band.
+
     Returns
     -------
-    Tuple[np.ndarray, List[Metadata]]
-        A tuple containing the satellite data as a volume with
-        dimensions (time, band, height, width) and a list of the filenames.
+    Tuple[np.ndarray, List[Metadata]
+        A tuple containing the satellite data as a volume with dimensions
+        (time, band, height, width) and a list of metadata since there are
+        multiple timestamps per satellite.
     """
-    
-    # note to self: uses stack_satellite_data
+    # Get the function to group the data based on the satellite type
+    grouping_fn = get_grouping_function(satellite_type)
 
-    # open the directory and get the relevant satellite files
-    path_list = get_satellite_files(tile_dir, satellite_type)
+    # Apply the grouping function to each file name to get the date and band
+    date_bands = [grouping_fn(file_name.name) for file_name in file_names]
 
-    # turn files into numpy arrays
-    sat_data = read_satellite_files(path_list)
+    # Sort the satellite data and file names based on the date and band
+    sat_data = [x for _, x in sorted(zip(date_bands, sat_data))]
+    file_names = [x for _, x in sorted(zip(date_bands, file_names))]
+    date_bands = sorted(date_bands)
 
-    # get the file names
-    names = [file.name for file in path_list]
+    # Initialize lists to store the stacked data and metadata
+    date_band_stack = []
+    sat_data_stack = []
+    metadata_stack = []
 
-    # stack it
-    return stack_satellite_data(sat_data, names, satellite_type) # returns the stacked data and metadata
+    # Group the data by date
+    for key, group in groupby(
+        zip(date_bands, sat_data, file_names),
+        key=lambda x: x[0][0]
+    ):
+        # Sort the group by band
+        sorted_group = sorted(group)
 
-def load_satellite_dir(
-        data_dir: str | os.PathLike,
-        satellite_type: str
-        ) -> Tuple[np.ndarray, List[List[Metadata]]]:
-    """
-    Load all bands for a given satellite type from a directory of multiple tile files.
-    Parameters
-    ----------
-    data_dir : str or os.PathLike
-        The directory containing the satellite tiles.
-    satellite_type : str
-        The type of satellite, one of "viirs", "sentinel1", "sentinel2",
-        "landsat", "gt"
-    Returns
-    -------
-    Tuple[np.ndarray, List[List[Metadata]]]
-        A tuple containing the satellite data as a volume with
-        dimensions (tile_dir, time, band, height, width) and a list of the
-        Metadata objects.
-    """
+        # Extract the date and band, satellite data, and file names from the
+        # sorted group
+        sorted_date_bands = [g[0] for g in sorted_group]
+        grouped_sat_data = [g[1] for g in sorted_group]
 
-        # note to self: used for last step of stack_satellite_data
-        # makes use of load_satellite by iterating through each tile directory
-    
-    multi_data = []
-    multi_metadata = []
+        # Stack the satellite data along a new axis and append it to the list
+        date_band_stack.append(sorted_date_bands)
+        sat_data_stack.append(np.stack(grouped_sat_data, axis=0))
 
-    # for each directory (use iterdir)
-    data_dir = Path(data_dir)
-    for tile_dir in data_dir.iterdir(): 
-        if not tile_dir.is_dir():
-            continue
-        # load the satellite data
-        data, metadata = load_satellite(tile_dir, satellite_type)
-        # append to the list
-        multi_data.append(data)
-        multi_metadata.append(metadata)
-    
-    # stack all the data
-    multi_data = np.stack(multi_data, axis=0)
-    return (multi_data, multi_metadata)
+        # Create a Metadata object and append it to the list
+        metadata_stack.append(Metadata(
+            satellite_type=satellite_type,
+            file_name=[g[2].name for g in sorted_group],
+            tile_id=sorted_group[0][2].parent.name,
+            bands=[g[0][1] for g in sorted_group],
+            time=key
+        ))
+
+    # Stack the list of satellite data arrays along a new axis to create a
+    # 4D array with dimensions (time, band, height, width)
+    sat_data_stack = np.stack(sat_data_stack, axis=0)
+
+    # Return the stacked satelliet data and the list Metadata objects.
+    return sat_data_stack, metadata_stack

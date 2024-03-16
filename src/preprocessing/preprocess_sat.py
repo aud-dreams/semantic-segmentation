@@ -1,4 +1,5 @@
 """ This code applies preprocessing functions on the IEEE GRSS ESD satellite data."""
+
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
@@ -6,195 +7,156 @@ from scipy.ndimage import gaussian_filter
 def per_band_gaussian_filter(img: np.ndarray, sigma: float = 1):
     """
     For each band in the image, apply a gaussian filter with the given sigma.
-    The gaussian filter should be applied to each heightxwidth image individually.
+
     Parameters
     ----------
     img : np.ndarray
-        The image to be filtered. The shape of the array is (time, band, height, width).
+        The image to be filtered.
     sigma : float
         The sigma of the gaussian filter.
+
     Returns
     -------
     np.ndarray
-        The filtered image. The shape of the array is (time, band, height, width).
+        The filtered image.
     """
-
-    # multiple channels
-    if img.ndim >= 3:
-        # Apply the Gaussian filter to each channel
-        return np.stack([gaussian_filter(img[:, :, channel], sigma) for channel in range(img.shape[2])], axis=-1)
-    else:
-        # single channel so just apply it directly
-        return gaussian_filter(img, sigma)
-
-    
+    for i in range(img.shape[0]):
+        img[i] = gaussian_filter(img[i], sigma)
+    return img
 
 
-def quantile_clip(img_stack: np.ndarray,
-                  clip_quantile: float,
-                  group_by_time=True
-                  ) -> np.ndarray:
+def quantile_clip(
+    img_stack: np.ndarray, clip_quantile: float, group_by_time=True
+) -> np.ndarray:
     """
     This function clips the outliers of the image stack by the given quantile.
-    It calculates the top `clip_quantile` samples and the bottom `clip_quantile`
-    samples, and sets any value above the top to the first value under the top value,
-    and any value below the bottom to the first value above the top value.
-    group_by_time affects how img_max and img_min are calculated, if
-    group_by_time is true, the quantile limits are shared along the time dimension.
-    Otherwise, the quantile limits are calculated individually for each image.
+
     Parameters
     ----------
     img_stack : np.ndarray
-        The image stack to be clipped. The shape of the array is (time, band, height, width).
+        The image stack to be clipped.
     clip_quantile : float
-        The quantile to clip the outliers by. Value between 0 and 0.5.
+        The quantile to clip the outliers by.
+
     Returns
     -------
     np.ndarray
-        The clipped image stack. The shape of the array is (time, band, height, width).
+        The clipped image stack.
     """
-
     if group_by_time:
-        # by specifying axis=0, we are taking the quantile along the time dimension
-        lower_bound = np.quantile(img_stack, clip_quantile, axis=0, keepdims=True)
-        upper_bound = np.quantile(img_stack, 1 - clip_quantile, axis=0, keepdims=True)
+        axis = (-2, -1)
     else:
-        lower_bound = np.quantile(img_stack, clip_quantile)
-        upper_bound = np.quantile(img_stack, 1 - clip_quantile)
+        axis = (0, -2, -1)
+    data_lower_bound = np.quantile(img_stack, clip_quantile, axis=axis, keepdims=True)
+    data_upper_bound = np.quantile(
+        img_stack, 1 - clip_quantile, axis=axis, keepdims=True
+    )
+    img_stack = np.clip(img_stack, data_lower_bound, data_upper_bound)
 
-    # determine the largest value below upper bound and smallest value above lower bound
-    max_value = np.max(img_stack[img_stack < upper_bound])
-    min_value = np.min(img_stack[img_stack > lower_bound])
-
-    # clip
-    processed_img = np.clip(img_stack, min_value, max_value)
-    return processed_img    
+    return img_stack
 
 
 def minmax_scale(img: np.ndarray, group_by_time=True):
     """
-    This function minmax scales the image stack to values between 0 and 1.
-    This transforms any image to have a range between img_min to img_max
-    to an image with the range 0 to 1, using the formula 
-    (pixel_value - img_min)/(img_max - img_min).
-    group_by_time affects how img_max and img_min are calculated, if
-    group_by_time is true, the min and max are shared along the time dimension.
-    Otherwise, the min and max are calculated individually for each image.
-    
+    This function minmax scales the image stack.
+
     Parameters
     ----------
     img : np.ndarray
-        The image stack to be minmax scaled. The shape of the array is (time, band, height, width).
+        The image stack to be minmax scaled.
     group_by_time : bool
         Whether to group by time or not.
+
     Returns
     -------
     np.ndarray
-        The minmax scaled image stack. The shape of the array is (time, band, height, width).
+        The minmax scaled image stack.
     """
-
     if group_by_time:
-        min_val = img.min(axis=(1,2), keepdims=True)
-        max_val = img.max(axis=(1,2), keepdims=True)
+        axis = (-2, -1)
     else:
-        min_val = img.min(keepdims=True)
-        max_val = img.max(keepdims=True)
-    
-    range_val = max_val - min_val 
-    if np.all(range_val == 0):
-        processed_img = np.zeros_like(img) # avoid dividing by 0! 
-    else:
-        processed_img = (img - min_val)/(range_val)
+        axis = (0, -2, -1)
+    img = img.astype(np.float32)
+    min_val = img.min(axis=axis, keepdims=True)
+    max_val = img.max(axis=axis, keepdims=True)
+    normalized_img = (img - min_val) / (max_val - min_val)
+    return normalized_img
 
-    # clip as needed
-    scaled_img = np.clip(processed_img, 0, 1)
-
-    return scaled_img
 
 def brighten(img, alpha=0.13, beta=0):
     """
-    This is calculated using the formula new_pixel = alpha*pixel+beta.
-    If a value of new_pixel falls outside of the [0,1) range,
-    the values are clipped to be 0 if the value is under 0 and 1 if the value is over 1.
+    Function to brighten the image.
+
     Parameters
     ----------
     img : np.ndarray
-        The image to be brightened. The shape of the array is (time, band, height, width).
-        The input values are between 0 and 1.
+        The image to be brightened.
     alpha : float
         The alpha parameter of the brightening.
     beta : float
         The beta parameter of the brightening.
+
     Returns
     -------
     np.ndarray
-        The brightened image. The shape of the array is (time, band, height, width).
+        The brightened image.
     """
-    processed_img = alpha*img[:, :, :, :] + beta
-    processed_img[processed_img < 0] = 0
-    processed_img[processed_img > 1] = 1
-    return processed_img
+    return np.clip(alpha * img + beta, 0.0, 1.0)
 
 
 def gammacorr(band, gamma=2):
     """
     This function applies a gamma correction to the image.
-    This is done using the formula pixel^(1/gamma)
+
     Parameters
     ----------
     band : np.ndarray
-        The image to be gamma corrected. The shape of the array is (time, band, height, width).
-        The input values are between 0 and 1.
+        The image to be gamma corrected.
     gamma : float
         The gamma parameter of the gamma correction.
+
     Returns
     -------
     np.ndarray
-        The gamma corrected image. The shape of the array is (time, band, height, width).
+        The gamma corrected image.
     """
-    processed_band = np.power(band, 1/gamma)
-    return processed_band
+    return np.power(band, 1 / gamma)
 
 
 def maxprojection_viirs(
-        viirs_stack: np.ndarray,
-        clip_quantile: float = 0.01
-        ) -> np.ndarray:
+    viirs_stack: np.ndarray, clip_quantile: float = 0.01
+) -> np.ndarray:
     """
-    This function takes a stack of VIIRS tiles and returns a single
+    This function takes a directory of VIIRS tiles and returns a single
     image that is the max projection of the tiles.
-    The output value of the projection is such that 
-    output[band,i,j] = max_time(input[time,band,i,j])
-    i.e, the value of a pixel is the maximum value over all time steps.
+
     Parameters
     ----------
     tile_dir : str
-        The directory containing the VIIRS tiles. The shape of the array is (time, band, height, width).
+        The directory containing the VIIRS tiles.
+
     Returns
     -------
     np.ndarray
-        Max projection of the VIIRS stack, of shape (band, height, width)
     """
-    # HINT: use the time dimension to perform the max projection over.
-    # also, must clip (do it for each image individually)
+    for i in range(viirs_stack.shape[0]):
+        viirs_data_lower_bound = np.quantile(viirs_stack[i, :, :, :], clip_quantile)
+        viirs_data_upper_bound = np.quantile(viirs_stack[i, :, :, :], 1 - clip_quantile)
+        viirs_stack[i, :, :, :] = np.clip(
+            viirs_stack[i, :, :, :], viirs_data_lower_bound, viirs_data_upper_bound
+        )
 
-    # for each time, clip every image (band) by input quantile 
-    lower_bound = np.quantile(viirs_stack, clip_quantile, axis=(1, 2, 3), keepdims=True)
-    upper_bound = np.quantile(viirs_stack, 1 - clip_quantile, axis=(1, 2, 3), keepdims=True)
-    processed_stack = np.clip(viirs_stack, lower_bound, upper_bound) 
+    # Calculate the max projection of the viirs_data_stack along the third axis
+    # and assign it to the blank_array
+    viirs_stack = np.max(viirs_stack, axis=0)
+    viirs_stack = minmax_scale(viirs_stack)
 
-    # use np.max along time dimension (axis = 0)
-    maxProj = np.max(processed_stack, axis=0)
+    return viirs_stack
 
-    # minimax scale
-    maxProj = minmax_scale(maxProj, group_by_time=True)
-    return maxProj
-    
+
 def preprocess_sentinel1(
-        sentinel1_stack: np.ndarray,
-        clip_quantile: float = 0.01,
-        sigma=1
-        ) -> np.ndarray:
+    sentinel1_stack: np.ndarray, clip_quantile: float = 0.01, sigma=1
+) -> np.ndarray:
     """
     In this function we will preprocess sentinel1. The steps for preprocessing
     are the following:
@@ -203,27 +165,21 @@ def preprocess_sentinel1(
         - Apply a gaussian filter
         - Minmax scale
     """
-        
-    # Convert to dB scale
-    processed_stack = 10 * np.log10(sentinel1_stack)
-    
-    # Clip outliers
-    clipped_stack = quantile_clip(processed_stack, clip_quantile, group_by_time=False) # originally set to True
 
-    # Apply a gaussian filter
-    gauss_stack = per_band_gaussian_filter(clipped_stack, sigma=sigma)
+    # convert data to dB
+    sentinel1_stack = np.log10(sentinel1_stack)
 
-    # Minmax scale
-    mimimax_stack = minmax_scale(processed_stack, group_by_time=False) # originally set to True
+    # clip outliers
+    sentinel1_stack = quantile_clip(sentinel1_stack, clip_quantile=clip_quantile)
+    sentinel1_stack = per_band_gaussian_filter(sentinel1_stack, sigma=sigma)
+    sentinel1_stack = minmax_scale(sentinel1_stack)
 
-    return mimimax_stack
-    
+    return sentinel1_stack
 
 
-def preprocess_sentinel2(sentinel2_stack: np.ndarray,
-                         clip_quantile: float = 0.05,
-                         gamma: float = 2.2
-                         ) -> np.ndarray:
+def preprocess_sentinel2(
+    sentinel2_stack: np.ndarray, clip_quantile: float = 0.1, gamma: float = 2.2
+) -> np.ndarray:
     """
     In this function we will preprocess sentinel-2. The steps for
     preprocessing are the following:
@@ -231,20 +187,18 @@ def preprocess_sentinel2(sentinel2_stack: np.ndarray,
         - Apply a gamma correction
         - Minmax scale
     """
-    # clip outliers
-    processed_stack = quantile_clip(sentinel2_stack, clip_quantile, group_by_time=False)
-    # apply gamma correction
-    processed_stack = gammacorr(processed_stack, gamma=gamma)
-    # minmax scale
-    processed_stack = minmax_scale(processed_stack, group_by_time=False)
-    return processed_stack
+    sentinel2_stack = quantile_clip(
+        sentinel2_stack, clip_quantile=clip_quantile, group_by_time=False
+    )
+    sentinel2_stack = gammacorr(sentinel2_stack, gamma=gamma)
+    sentinel2_stack = minmax_scale(sentinel2_stack, group_by_time=False)
+
+    return sentinel2_stack
 
 
 def preprocess_landsat(
-        landsat_stack: np.ndarray,
-        clip_quantile: float = 0.05,
-        gamma: float = 2.2
-        ) -> np.ndarray:
+    landsat_stack: np.ndarray, clip_quantile: float = 0.05, gamma: float = 2.2
+) -> np.ndarray:
     """
     In this function we will preprocess landsat. The steps for preprocessing
     are the following:
@@ -252,13 +206,13 @@ def preprocess_landsat(
         - Apply a gamma correction
         - Minmax scale
     """
-    # clip outliers
-    processed_stack = quantile_clip(landsat_stack, clip_quantile, group_by_time=True)
-    # apply gamma correction
-    processed_stack = gammacorr(processed_stack, gamma=gamma)
-    # minmax scale
-    processed_stack = minmax_scale(processed_stack, group_by_time=True)
-    return processed_stack 
+    landsat_stack = quantile_clip(
+        landsat_stack, clip_quantile=clip_quantile, group_by_time=False
+    )
+    landsat_stack = gammacorr(landsat_stack, gamma=gamma)
+    landsat_stack = minmax_scale(landsat_stack, group_by_time=False)
+
+    return landsat_stack
 
 
 def preprocess_viirs(viirs_stack, clip_quantile=0.05) -> np.ndarray:
@@ -268,8 +222,8 @@ def preprocess_viirs(viirs_stack, clip_quantile=0.05) -> np.ndarray:
         - Clip higher and lower quantile outliers per band per timestep
         - Minmax scale
     """
-    # clip outliers
-    processed_stack = quantile_clip(viirs_stack, clip_quantile, group_by_time=True)
-    # minmax scale
-    processed_stack = minmax_scale(processed_stack, group_by_time=True)
-    return processed_stack
+    viirs_stack = quantile_clip(
+        viirs_stack, clip_quantile=clip_quantile, group_by_time=True
+    )
+    viirs_stack = minmax_scale(viirs_stack, group_by_time=True)
+    return viirs_stack
