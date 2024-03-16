@@ -1,0 +1,1 @@
+python -m scripts.train --model_type=UNet --max_epochs=5 --in_channels=9 --embedding_size=9

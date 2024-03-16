@@ -209,6 +209,13 @@ class ESDDataModule(pl.LightningDataModule):
                     tile_dir = raw_path.parent.parent / "processed/4x4/Train"
                     subtile.save(tile_dir)
 
+                    # for path in tile_dir.iterdir():
+                    #     print("AUDREY", path)
+                    #     parent_tile_id = path.stem_split("_")[0]
+                    #     new_dir = tile_dir / parent_tile_id
+                    #     print("AUDREY2", new_dir)
+                    #     subtile.save(new_dir)
+
             # loop thru the validation list and store subtiles into data/processed/<your_ground_truth_subtile_size_dim>/Val
             for val_parent_image in val_tile_dir:
                 satellite_stack, satellite_metadata = self.__load_and_preprocess(
