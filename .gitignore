@@ -3,10 +3,20 @@ data/processed/*
 data/raw/Val/
 data/raw/zipfiles/*
 data/raw/Train/
-data/raw/unit_test_data/*
-
+plots/*
+scripts/lightning_logs/
+scripts/wandb/
+models/*
+my-first-sweep/
+data/predictions/
+models/*
 esdenv
 references/*
+.vscode/*
+wandb/
+lightning_logs/
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
