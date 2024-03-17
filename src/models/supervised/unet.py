@@ -18,6 +18,7 @@ class DoubleConvHelper(nn.Module):
             mid_channels (int): number of channels to use in the intermediate layer    
         """
         super().__init__()
+        self.save_hyperparameters(hparams)
         if mid_channels is None:
             mid_channels = out_channels
         self.double_conv = nn.Sequential(

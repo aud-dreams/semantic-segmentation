@@ -26,3 +26,5 @@ parameters:
     value: 4
   raw_dir:
     value: 'data/raw/Train'
+  embedding_size:
+    values: [64, 128]
