@@ -169,36 +169,36 @@ class ESDSegmentation(pl.LightningModule):
         )  # squeeze and cast the mask to int64
 
         # log metrics
-        self.log("train_loss", loss)
-        self.log("train_accuracy", self.train_accuracy(y, batch[1].squeeze(1)))
-        self.log("train_auc_avg", self.train_auc(y, batch[1].squeeze(1).to(torch.int32)))
-        self.log("train_f1_avg", self.train_f1(y, batch[1].squeeze(1)))
-        self.log("train_iou_avg", self.train_iou(y, batch[1].squeeze(1)))
+        self.log("train_loss", loss,on_epoch=True)
+        self.log("train_accuracy", self.train_accuracy(y, batch[1].squeeze(1)),on_epoch=True)
+        self.log("train_auc_avg", self.train_auc(y, batch[1].squeeze(1).to(torch.int32)),on_epoch=True)
+        self.log("train_f1_avg", self.train_f1(y, batch[1].squeeze(1)),on_epoch=True)
+        self.log("train_iou_avg", self.train_iou(y, batch[1].squeeze(1)),on_epoch=True)
 
         # class 0
-        y_pred_0 = y[:, 0, :, :]
-        y_true_0 = batch[1].squeeze(1) == 0
+        #y_pred_0 = y[:, 0, :, :]
+        #y_true_0 = batch[1].squeeze(1) == 0
         #self.log("train_auc_0", self.train_auc(y_pred_0, y_true_0.to(torch.int32)))
         #self.log("train_f1_0", self.train_f1(y_pred_0, y_true_0))
         #self.log("train_iou_0", self.train_iou(y_pred_0, y_true_0))
 
         # class 1
-        y_pred_1 = y[:, 1, :, :]
-        y_true_1 = batch[1].squeeze(1) == 1
+        #y_pred_1 = y[:, 1, :, :]
+        #y_true_1 = batch[1].squeeze(1) == 1
         #self.log("train_auc_1", self.train_auc(y_pred_1, y_true_1.to(torch.int32)))
         #self.log("train_f1_1", self.train_f1(y_pred_1, y_true_1))
         #self.log("train_iou_1", self.train_iou(y_pred_1, y_true_1))
 
         # class 2
-        y_pred_2 = y[:, 2, :, :]
-        y_true_2 = batch[1].squeeze(1) == 2
+        #y_pred_2 = y[:, 2, :, :]
+        #y_true_2 = batch[1].squeeze(1) == 2
         #self.log("train_auc_2", self.train_auc(y_pred_2, y_true_2.to(torch.int32)))
         #self.log("train_f1_2", self.train_f1(y_pred_2, y_true_2))
         #self.log("train_iou_2", self.train_iou(y_pred_2, y_true_2))
         
         # class 3
-        y_pred_3 = y[:, 3, :, :]
-        y_true_3 = batch[1].squeeze(1) == 3
+        #y_pred_3 = y[:, 3, :, :]
+        #y_true_3 = batch[1].squeeze(1) == 3
         #self.log("train_auc_3", self.train_auc(y_pred_3, y_true_3.to(torch.int32)))
         #self.log("train_f1_3", self.train_f1(y_pred_3, y_true_3))
         #self.log("train_iou_3", self.train_iou(y_pred_3, y_true_3))
@@ -259,31 +259,31 @@ class ESDSegmentation(pl.LightningModule):
         self.log("val_f1_avg", self.val_f1(y, batch[1].squeeze(1)))
         
                     # class 0
-        y_pred_0 = y[:, 0, :, :]
-        y_true_0 = batch[1].squeeze(1) == 0
+        #y_pred_0 = y[:, 0, :, :]
+        #y_true_0 = batch[1].squeeze(1) == 0
         #self.log("val_auc_0", self.val_auc(y_pred_0, y_true_0))
-        self.log("val_f1_0", self.val_f1(y_pred_0, y_true_0))
+        #self.log("val_f1_0", self.val_f1(y_pred_0, y_true_0))
         #self.log("val_iou_0", self.val_iou(y_pred_0, y_true_0))
 
         # class 1
-        y_pred_1 = y[:, 1, :, :]
-        y_true_1 = batch[1].squeeze(1) == 1
+        #y_pred_1 = y[:, 1, :, :]
+        #y_true_1 = batch[1].squeeze(1) == 1
         #self.log("val_auc_1", self.val_auc(y_pred_1, y_true_1))
-        self.log("val_f1_1", self.val_f1(y_pred_1, y_true_1))
+        #self.log("val_f1_1", self.val_f1(y_pred_1, y_true_1))
         #self.log("val_iou_1", self.val_iou(y_pred_1, y_true_1))
 
         # class 2
-        y_pred_2 = y[:, 2, :, :]
-        y_true_2 = batch[1].squeeze(1) == 2
+        #y_pred_2 = y[:, 2, :, :]
+        #y_true_2 = batch[1].squeeze(1) == 2
         #self.log("val_auc_2", self.val_auc(y_pred_2, y_true_2))
-        self.log("val_f1_2", self.val_f1(y_pred_2, y_true_2))
+        #self.log("val_f1_2", self.val_f1(y_pred_2, y_true_2))
         #self.log("val_iou_2", self.val_iou(y_pred_2, y_true_2))
         
         # class 3
-        y_pred_3 = y[:, 3, :, :]
-        y_true_3 = batch[1].squeeze(1) == 3
+        #y_pred_3 = y[:, 3, :, :]
+        #y_true_3 = batch[1].squeeze(1) == 3
         #self.log("val_auc_3", self.val_auc(y_pred_3, y_true_3))
-        self.log("val_f1_3", self.val_f1(y_pred_3, y_true_3))
+        #self.log("val_f1_3", self.val_f1(y_pred_3, y_true_3))
         #self.log("val_iou_3", self.val_iou(y_pred_3, y_true_3))
 
 

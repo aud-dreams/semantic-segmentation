@@ -1,5 +1,5 @@
 program: train_sweeps.py
-method: random #we can also use grid and bayes
+method: bayes #options: random, grid, bayes
 
 metric:
   name: val_loss
@@ -13,7 +13,7 @@ parameters:
   learning_rate:
     distribution: uniform
     min: 0.0
-    max: 0.1
+    max: 1e-3
   batch_size:
     values: [8, 16]
   scale_factor:
@@ -28,3 +28,7 @@ parameters:
     value: 'data/raw/Train'
   embedding_size:
     values: [64, 128]
+  accelerator:
+    value: 'cuda'
+  model_type:
+    value: 'UNetxx'
