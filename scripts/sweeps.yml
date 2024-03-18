@@ -21,7 +21,7 @@ parameters:
   n_encoders:
     values: [1, 2]
   in_channels:
-    value: 9
+    value: 1
   out_channels:
     value: 4
   raw_dir:

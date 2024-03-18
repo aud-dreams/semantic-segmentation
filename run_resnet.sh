@@ -1,1 +1,1 @@
-python -m scripts.train --model_type=FCNResnetTransfer --max_epochs=5 --in_channels=9
+python -m scripts.train --model_type=FCNResnetTransfer --max_epochs=5 --in_channels=1

@@ -34,7 +34,7 @@ class ESDConfig:
 
     processed_dir: str | os.PathLike = root / "data/processed/4x4"
     raw_dir: str | os.PathLike = root / "data/raw/Train"
-    selected_bands: None = None
+    selected_bands: None | dict[str, list[str]] = None
     model_type: str = "SegmentationCNN"
     tile_size_gt: int = 4
     batch_size: int = 8
@@ -241,5 +241,7 @@ if __name__ == "__main__":
     # --pool_sizes=5,5,2 to call it correctly
 
     parse_args = parser.parse_args()
-
-    train(ESDConfig(**parse_args.__dict__))
+    train_config = ESDConfig(**parse_args.__dict__)
+    # modify your selected_bands here
+    train_config.selected_bands = {"viirs_maxproj": ["0"], "gt": ["0"]}
+    train(train_config)
