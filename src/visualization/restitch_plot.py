@@ -33,7 +33,6 @@ def restitch_and_plot(options, datamodule, model, parent_tile_id, satellite_type
     st_img, st_gt, st_pred_subtile = restitch_eval(Path(options.processed_dir) / "Val" / "subtiles", satellite_type, parent_tile_id, (0,4), (0,4), datamodule, model)
     # reconstruct the rgb
     st_img = st_img[0, rgb_bands, :, :] # TODO: check if use of rgb_bands is correct
-    # print(f"{st_img.shape}")
     # plot
     st_gt = np.squeeze(st_gt, axis=0)
     st_img = st_img.transpose(1, 2, 0)

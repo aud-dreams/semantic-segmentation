@@ -42,7 +42,6 @@ class ESDConfig:
     seed: int = 12378921
     learning_rate: float = 1e-3
     num_workers: int = 11
-    # accelerator: str = "gpu"
     accelerator: str = "cpu"
     devices: int = 1
     in_channels: int = 99
@@ -50,7 +49,6 @@ class ESDConfig:
     depth: int = 2
     n_encoders: int = 2
     embedding_size: int = 64
-    #pool_sizes: str = "5,5,2"  # List[int] = [5,5,2]
     pool_sizes: tuple[int] = (5, 5, 2)
     kernel_size: int = 3
     scale_factor: int = 50
@@ -66,10 +64,6 @@ def train(options: ESDConfig):
             options for the experiment
     """
     # Initialize the weights and biases logger
-    # wandb.init(
-    #     project='esd-segmentation', entity='afropixel'
-    # )
-    # Initialize the weights and biases logger
     pprint(f"{options=}")
     wandb.init()
     wandb_logger = pl.loggers.WandbLogger(
@@ -79,10 +73,6 @@ def train(options: ESDConfig):
     # initiate the ESDDatamodule
     # use the options object to initiate the datamodule correctly
     # make sure to prepare_data in case the data has not been preprocessed
-
-    # NOTE: prepare_data comes from a previous HW
-
-    # data_module = ESDDataModule(options)
     data_module = ESDDataModule(
         processed_dir=options.processed_dir,
         raw_dir=options.raw_dir,
@@ -92,8 +82,6 @@ def train(options: ESDConfig):
     data_module.prepare_data()
 
     # create a dictionary with the parameters to pass to the models
-    # NOTE: params are depth down to scale_factor
-    # NOTE: work with whoever's coding sat_module to determine how dict works
     model_params = {
         "depth": options.depth,
         "n_encoders": options.n_encoders,
@@ -104,7 +92,6 @@ def train(options: ESDConfig):
     }
 
     # initialize the ESDSegmentation module
-    # NOTE: I assume this object contains our actual model
     esd_segmentation = ESDSegmentation(
         options.model_type,
         options.in_channels,
@@ -136,16 +123,9 @@ def train(options: ESDConfig):
         RichModelSummary(max_depth=3),
     ]
 
-    # create a pytorch Trainer
-    # see pytorch_lightning.Trainer
+
     # make sure to use the options object to load it with the correct options
-
-    # run trainer.fit
-    # make sure to use the datamodule option
-
-    # trainer = pl.Trainer(
-    #     logger=wandb_logger, datamodule=data_module, callbacks=callbacks
-    # )  # TODO: check this line
+    # run trainer.fit after initializing the trainer
     trainer = pl.Trainer(
         logger=wandb_logger,
         max_epochs=options.max_epochs,
@@ -156,7 +136,7 @@ def train(options: ESDConfig):
     )
     trainer.fit(
         model=esd_segmentation, datamodule=data_module
-    )  # TODO: consult with whoever writes ESDSegmentation
+    )
 
 
 if __name__ == "__main__":
@@ -238,7 +218,6 @@ if __name__ == "__main__":
         type=int,
         default=config.scale_factor,
     )
-    # --pool_sizes=5,5,2 to call it correctly
 
     parse_args = parser.parse_args()
     train_config = ESDConfig(**parse_args.__dict__)

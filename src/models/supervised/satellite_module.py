@@ -67,26 +67,19 @@ class ESDSegmentation(pl.LightningModule):
         else:
             raise ValueError(f"model_type {model_type} not recognized")
 
-        # NOTE: use torchmetrics
-        # NOTE: per class means training accuracy, validation accuracy? (from Discord)
 
         # define performance metrics for segmentation task
-        # such as accuracy per class accuracy, average IoU, per class IoU,
-        # per class AUC, average AUC, per class F1 score, average F1 score
-        # these metrics will be logged to weights and biases
-        
+        # such as accuracy per class accuracy, average IoU, average F1 score, average AUC, etc.
+        # these metrics will be logged to weights and biases        
         self.train_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=4)
         self.val_accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=4)
             
-        #self.avg_auc = torchmetrics.AUROC(average="macro",task="multiclass", num_classes=4)
         self.train_auc = torchmetrics.AUROC(task="multiclass", num_classes=4)
         self.val_auc = torchmetrics.AUROC(task="multiclass", num_classes=4)
         
-        #self.avg_f1 = torchmetrics.F1Score(average="macro",task="multiclass", num_classes=4)
         self.train_f1 = torchmetrics.F1Score(task="multiclass", num_classes=4)
         self.val_f1 = torchmetrics.F1Score(task="multiclass", num_classes=4)
         
-        #self.avg_iou = torchmetrics.classification.MulticlassJaccardIndex(average="macro",num_classes=4)
         self.train_iou = torchmetrics.classification.MulticlassJaccardIndex(num_classes=4)
         self.val_iou = torchmetrics.classification.MulticlassJaccardIndex(num_classes=4)
 
@@ -98,6 +91,7 @@ class ESDSegmentation(pl.LightningModule):
         Ouputs: y, a (batch, output_channels, width/scale_factor, height/scale_factor) image
         """
         if isinstance(self.model, UnetPlusPlus):
+            # padding is required to prevent input channel errors
             _, _, height, width = X.shape
             pad_height = (32 - height % 32) % 32
             pad_width = (32 - width % 32) % 32
@@ -111,7 +105,6 @@ class ESDSegmentation(pl.LightningModule):
                 X = F.pad(X, (pad_left, pad_right, pad_top, pad_bottom), "constant", 0)
 
         X = self.model.forward(X)
-        # print(f"{X.shape=}")
         if isinstance(self.model, UnetPlusPlus):
             if X.size(2) > 200 and X.size(3) > 200:
                 padding_removed = (X.size(2) - 200) // 2
@@ -178,30 +171,22 @@ class ESDSegmentation(pl.LightningModule):
         # class 0
         y_pred_0 = y[:, 0, :, :]
         y_true_0 = batch[1].squeeze(1) == 0
-        #self.log("train_auc_0", self.train_auc(y_pred_0, y_true_0.to(torch.int32)))
         self.log("train_f1_0", self.train_f1(y_pred_0, y_true_0))
-        #self.log("train_iou_0", self.train_iou(y_pred_0, y_true_0))
 
         # class 1
         y_pred_1 = y[:, 1, :, :]
         y_true_1 = batch[1].squeeze(1) == 1
-        #self.log("train_auc_1", self.train_auc(y_pred_1, y_true_1.to(torch.int32)))
         self.log("train_f1_1", self.train_f1(y_pred_1, y_true_1))
-        #self.log("train_iou_1", self.train_iou(y_pred_1, y_true_1))
 
         # class 2
         y_pred_2 = y[:, 2, :, :]
         y_true_2 = batch[1].squeeze(1) == 2
-        #self.log("train_auc_2", self.train_auc(y_pred_2, y_true_2.to(torch.int32)))
         self.log("train_f1_2", self.train_f1(y_pred_2, y_true_2))
-        #self.log("train_iou_2", self.train_iou(y_pred_2, y_true_2))
         
         # class 3
         y_pred_3 = y[:, 3, :, :]
         y_true_3 = batch[1].squeeze(1) == 3
-        #self.log("train_auc_3", self.train_auc(y_pred_3, y_true_3.to(torch.int32)))
         self.log("train_f1_3", self.train_f1(y_pred_3, y_true_3))
-        #self.log("train_iou_3", self.train_iou(y_pred_3, y_true_3))
 
         return loss
         
@@ -240,8 +225,6 @@ class ESDSegmentation(pl.LightningModule):
             Gradients will not propagate unless the tensor is a scalar tensor.
         """
 
-        # NOTE: the process is exactly the same as the training step
-
         # batch is passed in, cast as needed
         casted_data = batch[0].to(torch.float32)
 
@@ -253,39 +236,29 @@ class ESDSegmentation(pl.LightningModule):
         
         # log metrics
         self.log("val_loss", loss)
-
         self.log("val_auc_avg", self.val_auc(y, batch[1].squeeze(1).to(torch.int32)))
         self.log("val_accuracy", self.val_accuracy(y, batch[1].squeeze(1)))
         self.log("val_f1_avg", self.val_f1(y, batch[1].squeeze(1)))
         
-                    # class 0
+        # class 0
         y_pred_0 = y[:, 0, :, :]
         y_true_0 = batch[1].squeeze(1) == 0
-        #self.log("val_auc_0", self.val_auc(y_pred_0, y_true_0))
         self.log("val_f1_0", self.val_f1(y_pred_0, y_true_0))
-        #self.log("val_iou_0", self.val_iou(y_pred_0, y_true_0))
 
         # class 1
         y_pred_1 = y[:, 1, :, :]
         y_true_1 = batch[1].squeeze(1) == 1
-        #self.log("val_auc_1", self.val_auc(y_pred_1, y_true_1))
         self.log("val_f1_1", self.val_f1(y_pred_1, y_true_1))
-        #self.log("val_iou_1", self.val_iou(y_pred_1, y_true_1))
 
         # class 2
         y_pred_2 = y[:, 2, :, :]
         y_true_2 = batch[1].squeeze(1) == 2
-        #self.log("val_auc_2", self.val_auc(y_pred_2, y_true_2))
         self.log("val_f1_2", self.val_f1(y_pred_2, y_true_2))
-        #self.log("val_iou_2", self.val_iou(y_pred_2, y_true_2))
         
         # class 3
         y_pred_3 = y[:, 3, :, :]
         y_true_3 = batch[1].squeeze(1) == 3
-        #self.log("val_auc_3", self.val_auc(y_pred_3, y_true_3))
         self.log("val_f1_3", self.val_f1(y_pred_3, y_true_3))
-        #self.log("val_iou_3", self.val_iou(y_pred_3, y_true_3))
-
 
         return loss
 
@@ -298,10 +271,5 @@ class ESDSegmentation(pl.LightningModule):
             optimizer: torch.optim.Optimizer
                 Optimizer used to minimize the loss
         """
-        #print("-----------------")
-
-        # for param in self.model.parameters():
-        #     print(param)
-        #print("-----------------")
         optimizer = Adam(self.model.parameters(), lr=self.hparams.learning_rate)
         return optimizer
