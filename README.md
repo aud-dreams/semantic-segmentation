@@ -100,6 +100,8 @@ We currently have four trainable models: *SegmentationCNN*, *FCNResnetTransfer*,
 
     You can check model performance via Weights and Biases. Every run and epoch of your model training will automatically log statistics, such as loss, accuracy, AUC score, and more. 
 
+    ![wandb](data/assets/wandb.PNG)
+
 
 ## UNET++ Parameters Link
 We will include an example of our best-performing model, UNet++. We used its architecture and results for our tech memo. Below is an image of UNet++'s architecture. 
@@ -107,4 +109,5 @@ We will include an example of our best-performing model, UNet++. We used its arc
 
 
 The parameter file for our final UNet++ model is approximately 300 megabytes, and thus cannot fit into this repository. To circumvent this limitation, we include a link to the parameter file below.
+
 [Link to UNet++ Parameters](https://drive.google.com/drive/folders/1Awdv0pgzDclMZ89YWAD3tFwo9_4IDBUW?usp=sharing)
