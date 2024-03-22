@@ -6,6 +6,8 @@ metric:
   goal: minimize
 
 parameters:
+  model_type:
+    values: "UNetxx"
   depth: 
     values: [77]
   max_epochs:
