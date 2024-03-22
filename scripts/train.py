@@ -53,6 +53,11 @@ class ESDConfig:
     kernel_size: int = 3
     scale_factor: int = 50
     wandb_run_name: str | None = None
+    # for UNetxx only
+    encoder_name: str = "resnet34"
+    encoder_weights: str = "imagenet"
+    decoder_attention_type: str | None = None
+    
 
 
 def train(options: ESDConfig):

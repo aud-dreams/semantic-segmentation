@@ -63,7 +63,8 @@ class ESDSegmentation(pl.LightningModule):
                 in_channels, out_channels, model_params["scale_factor"]
             )
         elif model_type == "UNetxx":
-            self.model = UnetPlusPlus(encoder_name='resnet34', encoder_depth=5, encoder_weights='imagenet', decoder_use_batchnorm=True, decoder_channels=(256, 128, 64, 32, 16), decoder_attention_type=None, in_channels=1, classes=4, activation=None, aux_params=None)
+            self.model = UnetPlusPlus(
+                encoder_name= model_params['encoder_name'], encoder_depth=model_params['depth'], encoder_weights=model_params['encoder_weights'], decoder_use_batchnorm=True, decoder_channels=(256, 128, 64, 32, 16), decoder_attention_type=None, in_channels=1, classes=4, activation=None, aux_params=None)
         else:
             raise ValueError(f"model_type {model_type} not recognized")
 
