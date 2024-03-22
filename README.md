@@ -23,6 +23,7 @@ Included are scripts for preprocessing the IEEE GRSS dataset. These scripts are 
 Scripts for visualization of satellite data are included in *src/visualization*. The script *plot_utils.py* plots satellite images as well as histograms, ground truths, and other metadata for specific images, satellites, and satellite bands. Also included is *restitch_plot.py*, which takes in subtiles and restitches them together to assemble an rgb satellite image, the ground truth, and the model prediction in one row.
 
 Below are examples of histograms, ground truth tiles, max projection plots and plots reconstructed from satellite bands. 
+
 ![](plots/landsat_histogram.png)
 ![](plots/ground_truth_histogram.png)
 ![](plots/ground_truth.png)
@@ -31,6 +32,8 @@ Below are examples of histograms, ground truth tiles, max projection plots and p
 
 ## TRAINING
 Training is handled via Pytorch Lightning, and metrics are measured and kept track of using Weights and Biases (Wandb). Scripts and settings for training are located in the *scripts* directory. A .yaml file stores user settings for training, and *train_sweeps.py* works as a "wrapper script" for executing the entire training and metric tracking pipeline. 
+
+Note that a Wandb account is required to run training. Follow Wandb's instructions on how to create a project and connect it. You'll need to enter an API key into the terminal when prompted.
 
 Supporting functions and modules are located in the *src/models* or *src/esd_data* directories. For instance, dataset augmentation via image transformation is located in the *augmentations.py* script inside *src/esd_data*. Custom implementation of Pytorch's dataset, dataloader, and datamodule classes are located inside also located inside *src/esd_data*. Implementations of model architectures are located in *src/models*. More detail on how to train a model is shown in the **Quick Start** section.
 
@@ -42,31 +45,61 @@ Below is an example of what the output for restitching subtiles would look like.
 
 
 ## PREDICTION AND VALIDATION
-Model evaluation is performed by calling the *evaluate.py* script inside the *scripts* directory. To evaluate a specific model, you will need its corresponding .ckpt file that stores its parameters. Call *evaluate.py* with the path to your ckpt file. The validation accuracy will be outputted, and the predictions, compared to the ground truth and real satellite image, are sent as an image file to the *data/model/predictions* directory, where "model" is the name of the model you wanted to evaluate. Below is what the image output would look like.
-
-![Prediction Image](data/predictions/UNetxx/Tile42/restitched_visible_gt_predction.png)
+Model evaluation is performed by calling the *evaluate.py* script inside the *scripts* directory. To evaluate a specific model, you will need its corresponding .ckpt file that stores its parameters. Call *evaluate.py* with the path to your ckpt file. The validation accuracy will be outputted, and the predictions, compared to the ground truth and real satellite image, are sent as an image file to the *data/model/predictions* directory, where "model" is the name of the model you wanted to evaluate.
 
 ## Quick Start:
+
+
+We currently have four trainable models: *SegmentationCNN*, *FCNResnetTransfer*, *UNet* and *UNetxx*. The quick start would be based on how to run *UNetxx* on your machine. To run other models simply replace the model name with the one you want.
+
+
 1. Navigate to the project directory in your terminal.
 2. Create a virtual environment:
 ``python3 -m venv esdenv``
 3. Activate the virtual environment:
     * On macOS and Linux
 
+
         ``source esdenv/bin/activate``
     * On Windows:
 
+
         ``.\esdenv\Scripts\activate``
-4. Install the required packages: ``pip install -r requirements.txt``
+4. Install the required packages:
+
+
+    ``pip install -r requirements.txt``
+
 
     To deactivate the virtual environment, type ``deactivate``
 
-5. Run training with the hyperparameter sweeps
+
+5. Retrieving the dataset:
+
+
+    Please download and unzip the ``dfc2021_dse_train.zip`` saving the Train directory into the data/raw directory. The zip file is available at the following [url](https://drive.google.com/file/d/1mVDV9NkmyfZbkSiD5lkskv_MwOuYxiog/view?usp=sharing).
+
+
+6. Run training with the hyperparameter sweeps:
+
 
     `` python train_sweeps.py --sweep_file=sweeps.yml``
-    
-6. Run 
-noitadila
+   
+7. Run validation:
+
+
+    `` python scripts/evaluate.py --model_path=models/UNetxx/last.ckpt``
+   
+    After running the validation, there would be a **prediction** folder created in your **data/** directory. Inside the folder you can see the restitch image plot of the model prediction along with the origin sentinel2 and ground truth image.
+
+
+    Here is a sample output of the evaluate.py:
+    ![Prediction Image](data/predictions/UNetxx/Tile42/restitched_visible_gt_predction.png)
+
+8. Check model performance:
+
+    You can check model performance via Weights and Biases. Every run and epoch of your model training will automatically log statistics, such as loss, accuracy, AUC score, and more. 
+
 
 ## UNET++ Parameters Link
 We will include an example of our best-performing model, UNet++. We used its architecture and results for our tech memo. Below is an image of UNet++'s architecture. 
