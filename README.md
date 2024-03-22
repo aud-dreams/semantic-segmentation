@@ -94,7 +94,7 @@ We currently have four trainable models: _SegmentationCNN_, _FCNResnetTransfer_,
 
    You can check model performance via Weights and Biases. Every run and epoch of your model training will automatically log statistics, such as loss, accuracy, AUC score, and more.
 
-   ![wandb](data/assets/wandb.png)
+   ![wandb](data/assets/wandb.PNG)
 
 ## UNET++ Parameters Link
 
